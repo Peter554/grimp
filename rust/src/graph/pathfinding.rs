@@ -1,10 +1,8 @@
 use crate::errors::{GrimpError, GrimpResult};
 use crate::graph::{Graph, ModuleToken, EMPTY_MODULE_TOKENS};
-use indexmap::IndexMap;
-use rustc_hash::{FxHashMap, FxHashSet, FxHasher};
-use std::hash::BuildHasherDefault;
-
-type FxIndexMap<K, V> = IndexMap<K, V, BuildHasherDefault<FxHasher>>;
+use pathfinding::directed::bfs::bfs_bidirectional;
+use pathfinding::NodeRefs;
+use rustc_hash::{FxHashMap, FxHashSet};
 
 pub fn find_shortest_path_bidirectional(
     graph: &Graph,
@@ -17,88 +15,42 @@ pub fn find_shortest_path_bidirectional(
         return Err(GrimpError::SharedDescendants);
     }
 
-    let mut predecessors: FxIndexMap<ModuleToken, Option<ModuleToken>> = from_modules
-        .clone()
-        .into_iter()
-        .map(|m| (m, None))
-        .collect();
-    let mut successors: FxIndexMap<ModuleToken, Option<ModuleToken>> =
-        to_modules.clone().into_iter().map(|m| (m, None)).collect();
-
-    let mut i_forwards = 0;
-    let mut i_backwards = 0;
-    let middle = 'l: loop {
-        for _ in 0..(predecessors.len() - i_forwards) {
-            let module = *predecessors.get_index(i_forwards).unwrap().0;
-            let next_modules = graph.imports.get(module).unwrap();
-            for next_module in next_modules {
-                if excluded_modules.contains(next_module) {
+    Ok(bfs_bidirectional(
+        NodeRefs::from_iter(from_modules),
+        NodeRefs::from_iter(to_modules),
+        |module| {
+            let mut next_modules = vec![];
+            for candidate_next_module in graph.imports.get(*module).unwrap() {
+                if excluded_modules.contains(candidate_next_module) {
                     continue;
                 }
                 if excluded_imports
                     .get(&module)
                     .unwrap_or(&EMPTY_MODULE_TOKENS)
-                    .contains(next_module)
+                    .contains(candidate_next_module)
                 {
                     continue;
                 }
-                if !predecessors.contains_key(next_module) {
-                    predecessors.insert(*next_module, Some(module));
-                }
-                if successors.contains_key(next_module) {
-                    break 'l Some(*next_module);
-                }
+                next_modules.push(*candidate_next_module)
             }
-            i_forwards += 1;
-        }
-
-        for _ in 0..(successors.len() - i_backwards) {
-            let module = *successors.get_index(i_backwards).unwrap().0;
-            let next_modules = graph.reverse_imports.get(module).unwrap();
-            for next_module in next_modules {
-                if excluded_modules.contains(next_module) {
+            next_modules
+        },
+        |module| {
+            let mut next_modules = vec![];
+            for candidate_next_module in graph.reverse_imports.get(*module).unwrap() {
+                if excluded_modules.contains(candidate_next_module) {
                     continue;
                 }
                 if excluded_imports
-                    .get(next_module)
+                    .get(candidate_next_module)
                     .unwrap_or(&EMPTY_MODULE_TOKENS)
-                    .contains(&module)
+                    .contains(module)
                 {
                     continue;
                 }
-                if !successors.contains_key(next_module) {
-                    successors.insert(*next_module, Some(module));
-                }
-                if predecessors.contains_key(next_module) {
-                    break 'l Some(*next_module);
-                }
+                next_modules.push(*candidate_next_module)
             }
-            i_backwards += 1;
-        }
-
-        if i_forwards == predecessors.len() && i_backwards == successors.len() {
-            break 'l None;
-        }
-    };
-
-    if middle.is_none() {
-        return Ok(None);
-    }
-    let middle = middle.unwrap();
-
-    // Path found!
-    // Build the path.
-    let mut path = vec![];
-    let mut node = Some(middle);
-    while let Some(n) = node {
-        path.push(n);
-        node = *predecessors.get(&n).unwrap();
-    }
-    path.reverse();
-    let mut node = *successors.get(path.last().unwrap()).unwrap();
-    while let Some(n) = node {
-        path.push(n);
-        node = *successors.get(&n).unwrap();
-    }
-    Ok(Some(path))
+            next_modules
+        },
+    ))
 }

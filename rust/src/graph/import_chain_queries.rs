@@ -2,7 +2,8 @@ use crate::errors::GrimpResult;
 use crate::graph::pathfinding::find_shortest_path_bidirectional;
 use crate::graph::{ExtendWithDescendants, Graph, ModuleToken, EMPTY_MODULE_TOKENS};
 use itertools::Itertools;
-use pathfinding::prelude::bfs_reach;
+use pathfinding::directed::bfs::bfs_reach;
+use pathfinding::NodeRefs;
 use rustc_hash::{FxHashMap, FxHashSet};
 use slotmap::SecondaryMap;
 use tap::Conv;
@@ -35,25 +36,13 @@ impl Graph {
             start_modules.extend_with_descendants(self);
         }
 
-        let reachable_modules = bfs_reach(PathfindingNode::Initial, |module| {
-            let next_modules = match module {
-                PathfindingNode::Initial => &start_modules,
-                PathfindingNode::Module(module) => {
-                    imports_map.get(*module).unwrap_or(&EMPTY_MODULE_TOKENS)
-                }
-            };
-            next_modules
+        let reachable_modules = bfs_reach(NodeRefs::from_iter(&start_modules), |module| {
+            imports_map
+                .get(*module)
+                .unwrap_or(&EMPTY_MODULE_TOKENS)
                 .clone()
-                .into_iter()
-                .map(PathfindingNode::Module)
-        });
-
-        let reachable_modules = reachable_modules
-            .filter_map(|item| match item {
-                PathfindingNode::Initial => None,
-                PathfindingNode::Module(item) => Some(item),
-            })
-            .collect::<FxHashSet<_>>();
+        })
+        .collect::<FxHashSet<ModuleToken>>();
 
         &reachable_modules - &start_modules
     }
@@ -146,11 +135,4 @@ impl Graph {
 
         Ok(chains)
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum PathfindingNode {
-    // The Initial node is a trick so that we can start a BFS from multiple nodes.
-    Initial,
-    Module(ModuleToken),
 }
