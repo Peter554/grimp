@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+from collections.abc import Set as ABCSet
 from typing import Iterator, List, Optional, Sequence, Set, Tuple
 
 from typing_extensions import TypedDict
@@ -26,16 +27,9 @@ class ImportGraph(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def modules(self) -> Set[str]:
+    def modules(self) -> ABCSet[str]:
         """
         The names of all the modules in the graph.
-        """
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def contains_module(self, module: str) -> bool:
-        """
-        Determine whether a module exists within the graph.
         """
         raise NotImplementedError
 
