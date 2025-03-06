@@ -81,6 +81,9 @@ mod tests {
         FindMatchingModulesTestCase::new("foo.**", ["foo.bar", "foo.bar.baz"]),
     })]
     fn test_find_matching_modules(case: FindMatchingModulesTestCase) {
+        // The test here is just a sense check - we don't need to check again here how all the
+        // different types of module expressions work since that is already tested
+        // thoroughly elsewhere.
         let mut graph = Graph::default();
         graph.get_or_add_module("foo");
         graph.get_or_add_module("foo.bar");
