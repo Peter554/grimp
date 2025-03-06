@@ -235,7 +235,9 @@ class ImportGraph(abc.ABC):
             importer_expression: A module expression used for matching importing modules.
             imported_expression: A module expression used for matching imported modules.
         Returns:
-            An ordered list of direct imports matching the expressions (ordered alphabetically).
+            A list of direct imports matching the expressions, ordered alphabetically by importer,
+            then imported.
+            (We return a list rather than a set purely because dictionaries aren't hashable.)
         Raises:
             InvalidModuleExpression if either of the passed expressions are invalid.
 
