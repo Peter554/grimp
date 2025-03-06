@@ -215,9 +215,7 @@ class ImportGraph(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def find_matching_direct_imports(
-        self, *, importer_expression: str, imported_expression: str
-    ) -> List[Import]:
+    def find_matching_direct_imports(self, *, import_expression: str) -> List[Import]:
         """
         Find all direct imports matching the passed expressions.
 
@@ -232,14 +230,15 @@ class ImportGraph(abc.ABC):
         ]
 
         Args:
-            importer_expression: A module expression used for matching importing modules.
-            imported_expression: A module expression used for matching imported modules.
+            import_expression: An expression used for matching importing modules, in the form
+                "importer_expression -> imported_expression", where both expressions are
+                module expressions.
         Returns:
             A list of direct imports matching the expressions, ordered alphabetically by importer,
             then imported.
             (We return a list rather than a set purely because dictionaries aren't hashable.)
         Raises:
-            InvalidModuleExpression if either of the passed expressions are invalid.
+            InvalidImportExpression if either of the passed expressions are invalid.
 
         See `ImportGraph.find_matching_modules` for a description of module expressions.
         """

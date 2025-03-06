@@ -475,7 +475,7 @@ def test_find_matching_direct_imports(benchmark, large_graph):
     matching_imports = _run_benchmark(
         benchmark,
         lambda: large_graph.find_matching_direct_imports(
-            importer_expression="mypackage.domain.**", imported_expression="mypackage.data.**"
+            "mypackage.domain.** -> mypackage.data.**"
         ),
     )
     assert len(matching_imports) == 4051

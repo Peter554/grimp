@@ -65,3 +65,7 @@ class SourceSyntaxError(GrimpException):
 
 class InvalidModuleExpression(GrimpException):
     pass
+
+
+class InvalidImportExpression(GrimpException):
+    pass

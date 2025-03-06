@@ -1,7 +1,8 @@
 import pytest  # type: ignore
 
 from grimp.adaptors.graph import ImportGraph
-from grimp.exceptions import InvalidModuleExpression
+import re
+from grimp.exceptions import InvalidImportExpression
 
 
 def test_find_modules_directly_imported_by():
@@ -318,9 +319,7 @@ class TestFindMatchingDirectImports:
             line_contents=import_line_contents,
         )
 
-        assert graph.find_matching_direct_imports(
-            importer_expression="pkg.animals.*", imported_expression="pkg.food.*"
-        ) == [
+        assert graph.find_matching_direct_imports("pkg.animals.* -> pkg.food.*") == [
             {"importer": "pkg.animals.cat", "imported": "pkg.food.fish"},
             {"importer": "pkg.animals.dog", "imported": "pkg.food.chicken"},
         ]
@@ -340,26 +339,22 @@ class TestFindMatchingDirectImports:
             line_contents="...2",
         )
 
-        assert graph.find_matching_direct_imports(
-            importer_expression="pkg.animals.*", imported_expression="pkg.colors.*"
-        ) == [
+        assert graph.find_matching_direct_imports("pkg.animals.* -> pkg.colors.*") == [
             {"importer": "pkg.animals.dog", "imported": "pkg.colors.golden"},
         ]
 
-    def test_raises_error_if_importer_expression_is_invalid(self):
+    @pytest.mark.parametrize(
+        "expression",
+        [
+            "foo.. -> bar",
+            "foo -> bar..",
+            "foo > bar",
+        ],
+    )
+    def test_raises_error_if_expression_is_invalid(self, expression):
         graph = ImportGraph()
         with pytest.raises(
-            InvalidModuleExpression, match="foo.. is not a valid module expression."
+            InvalidImportExpression,
+            match=re.escape(f"{expression} is not a valid import expression."),
         ):
-            graph.find_matching_direct_imports(
-                importer_expression="foo..", imported_expression="bar"
-            )
-
-    def test_raises_error_if_imported_expression_is_invalid(self):
-        graph = ImportGraph()
-        with pytest.raises(
-            InvalidModuleExpression, match="bar.. is not a valid module expression."
-        ):
-            graph.find_matching_direct_imports(
-                importer_expression="foo", imported_expression="bar.."
-            )
+            graph.find_matching_direct_imports(expression)

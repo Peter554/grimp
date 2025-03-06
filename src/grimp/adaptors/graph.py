@@ -4,7 +4,12 @@ from grimp.application.ports.graph import DetailedImport, Import
 from grimp.domain.analysis import PackageDependency, Route
 from grimp.domain.valueobjects import Layer
 from grimp import _rustgrimp as rust  # type: ignore[attr-defined]
-from grimp.exceptions import ModuleNotPresent, NoSuchContainer, InvalidModuleExpression
+from grimp.exceptions import (
+    ModuleNotPresent,
+    NoSuchContainer,
+    InvalidModuleExpression,
+    InvalidImportExpression,
+)
 from grimp.application.ports import graph
 
 
@@ -108,15 +113,20 @@ class ImportGraph(graph.ImportGraph):
             imported=imported,
         )
 
-    def find_matching_direct_imports(
-        self, *, importer_expression: str, imported_expression: str
-    ) -> List[Import]:
+    def find_matching_direct_imports(self, import_expression: str) -> List[Import]:
+        try:
+            importer_expression, imported_expression = import_expression.split(" -> ")
+        except ValueError:
+            raise InvalidImportExpression(f"{import_expression} is not a valid import expression.")
+
         try:
             return self._rustgraph.find_matching_direct_imports(
                 importer_expression=importer_expression, imported_expression=imported_expression
             )
         except rust.InvalidModuleExpression as e:
-            raise InvalidModuleExpression(str(e)) from e
+            raise InvalidImportExpression(
+                f"{import_expression} is not a valid import expression."
+            ) from e
 
     def find_downstream_modules(self, module: str, as_package: bool = False) -> Set[str]:
         return self._rustgraph.find_downstream_modules(module, as_package)
