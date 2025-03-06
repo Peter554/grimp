@@ -74,8 +74,7 @@ impl ModuleExpression {
             }
         }
 
-        Regex::new(&(r"^".to_owned() + &pattern_parts.join(r".") + r"$"))
-            .map_err(|_| GrimpError::InvalidModuleExpression(expression.to_owned()))
+        Ok(Regex::new(&(r"^".to_owned() + &pattern_parts.join(r".") + r"$")).unwrap())
     }
 }
 
